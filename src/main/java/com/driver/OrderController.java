@@ -94,15 +94,12 @@ public class OrderController {
         return new ResponseEntity<>(countOfOrders, HttpStatus.CREATED);
     }
 
-    @GetMapping("/get-count-of-orders-left-after-given-time/{partnerId}")
-    public ResponseEntity<Integer> getOrdersLeftAfterGivenTimeByPartnerId(@PathVariable String time, @PathVariable String partnerId){
-
+    @GetMapping("/get-count-of-orders-left-after-given-time/{partnerId}/{time}")
+    public ResponseEntity<Integer> getOrdersLeftAfterGivenTimeByPartnerId(@PathVariable String partnerId, @PathVariable String time) {
         Integer countOfOrders = 0;
-
-        //countOfOrders that are left after a particular time of a DeliveryPartner
-
         return new ResponseEntity<>(countOfOrders, HttpStatus.CREATED);
     }
+
 
     @GetMapping("/get-last-delivery-time/{partnerId}")
     public ResponseEntity<String> getLastDeliveryTimeByPartnerId(@PathVariable String partnerId){
