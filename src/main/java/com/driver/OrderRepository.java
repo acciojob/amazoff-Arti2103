@@ -40,35 +40,45 @@ public class OrderRepository {
             partnerToOrderMap.get(partnerId).add(orderId);
             orderToPartnerMap.put(orderId, partnerId);
 
-            DeliveryPartner partner = partnerMap.get(partnerId);
-            partner.setNumberOfOrders(partner.getNumberOfOrders() + 1);
+
+            partnerMap.get(partnerId).setNumberOfOrders(partnerToOrderMap.get(partnerId).size());
         }
     }
 
     public Order findOrderById(String orderId){
         // your code here
-        return orderMap.get(orderId);
+        System.out.println("Finding order by ID: " + orderId);
+        return orderMap.getOrDefault(orderId, null);
     }
 
     public DeliveryPartner findPartnerById(String partnerId){
         // your code here
-        return partnerMap.get(partnerId);
+        System.out.println("Fetching partner: " + partnerId);
+        return partnerMap.getOrDefault(partnerId, null);
     }
 
     public Integer findOrderCountByPartnerId(String partnerId){
         // your code here
-        return partnerToOrderMap.getOrDefault(partnerId, new HashSet<>()).size();
+
+        System.out.println("Checking order count for partner: " + partnerId);
+        if (!partnerToOrderMap.containsKey(partnerId)) return 0;
+
+        return partnerToOrderMap.get(partnerId).size();
     }
 
     public List<String> findOrdersByPartnerId(String partnerId){
         // your code here
-        return new ArrayList<>(partnerToOrderMap.getOrDefault(partnerId, new HashSet<>()));
+        System.out.println("Fetching orders for partner: " + partnerId);
+        return partnerToOrderMap.getOrDefault(partnerId, new HashSet<>()).isEmpty()
+                ? new ArrayList<>()
+                : new ArrayList<>(partnerToOrderMap.get(partnerId));
     }
 
     public List<String> findAllOrders(){
         // your code here
         // return list of all orders
-        return new ArrayList<>(orderMap.keySet());
+        System.out.println("Fetching all orders...");
+        return orderMap.isEmpty() ? new ArrayList<>() : new ArrayList<>(orderMap.keySet());
     }
 
     public void deletePartner(String partnerId){
@@ -97,6 +107,9 @@ public class OrderRepository {
 
     public Integer findCountOfUnassignedOrders(){
         // your code here
+        System.out.println("Checking unassigned orders...");
+        if (orderMap == null || orderMap.isEmpty()) return 0;
+
         return (int) orderMap.keySet().stream()
                 .filter(orderId -> !orderToPartnerMap.containsKey(orderId))
                 .count();
@@ -118,16 +131,19 @@ public class OrderRepository {
         return hours * 60 + minutes;
     }
 
-    public String findLastDeliveryTimeByPartnerId(String partnerId){
-        // your code here
-        // code should return string in format HH:MM
-        int maxMinutes = partnerToOrderMap.getOrDefault(partnerId, new HashSet<>()).stream()
+    public String findLastDeliveryTimeByPartnerId(String partnerId) {
+        if (!partnerToOrderMap.containsKey(partnerId) || partnerToOrderMap.get(partnerId).isEmpty()) {
+            System.out.println("No orders found for partner: " + partnerId);
+            return "00:00"; // Default value if no deliveries
+        }
+
+        int maxMinutes = partnerToOrderMap.get(partnerId).stream()
                 .map(orderMap::get)
+                .filter(Objects::nonNull)
                 .mapToInt(Order::getDeliveryTime)
                 .max()
-                .orElse(0); // Extract the value safely
+                .orElse(0);
 
         return String.format("%02d:%02d", maxMinutes / 60, maxMinutes % 60);
-
     }
 }
