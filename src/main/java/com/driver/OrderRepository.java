@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import java.util.*;
 
-
 @Repository
 public class OrderRepository {
 
@@ -40,16 +39,19 @@ public class OrderRepository {
             orderToPartnerMap.put(orderId, partnerId);
 
             // Update partner's order count
-            partnerMap.get(partnerId).setNumberOfOrders(partnerToOrderMap.get(partnerId).size());
+            DeliveryPartner partner = partnerMap.get(partnerId);
+            if (partner != null) {
+                partner.setNumberOfOrders(partnerToOrderMap.get(partnerId).size());
+            }
         }
     }
 
     public Order findOrderById(String orderId) {
-        return orderMap.get(orderId);
+        return orderMap.getOrDefault(orderId, null);
     }
 
     public DeliveryPartner findPartnerById(String partnerId) {
-        return partnerMap.get(partnerId);
+        return partnerMap.getOrDefault(partnerId, null);
     }
 
     public Integer findOrderCountByPartnerId(String partnerId) {
@@ -81,7 +83,11 @@ public class OrderRepository {
             String partnerId = orderToPartnerMap.remove(orderId);
             if (partnerId != null && partnerToOrderMap.containsKey(partnerId)) {
                 partnerToOrderMap.get(partnerId).remove(orderId);
-                partnerMap.get(partnerId).setNumberOfOrders(partnerToOrderMap.get(partnerId).size());
+
+                DeliveryPartner partner = partnerMap.get(partnerId);
+                if (partner != null) {
+                    partner.setNumberOfOrders(partnerToOrderMap.get(partnerId).size());
+                }
             }
             orderMap.remove(orderId);
         }
@@ -99,6 +105,7 @@ public class OrderRepository {
 
     public Integer findOrdersLeftAfterGivenTimeByPartnerId(String timeString, String partnerId) {
         int givenTime = convertTimeToMinutes(timeString);
+
         return (int) partnerToOrderMap.getOrDefault(partnerId, new HashSet<>()).stream()
                 .map(orderMap::get)
                 .filter(Objects::nonNull)
