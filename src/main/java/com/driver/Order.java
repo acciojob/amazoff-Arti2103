@@ -1,41 +1,48 @@
 package com.driver;
 
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+@Entity
+@Table(name = "order_table")
 public class Order {
 
-    private final String id;
-    private final int deliveryTime;
+    @Id
+    private String id;
 
-    public Order(String id, String deliveryTime) {
-        if (id == null || id.isEmpty()) {
-            throw new IllegalArgumentException("Order ID cannot be null or empty");
-        }
-        if (deliveryTime == null || deliveryTime.isEmpty()) {
-            throw new IllegalArgumentException("Delivery time cannot be null or empty");
-        }
+    private String deliveryTime; // make this String
 
-        this.id = id;
-        this.deliveryTime = convertToMinutes(deliveryTime);
+    public Order() {
+        // Default constructor
     }
 
-    private int convertToMinutes(String time) {
-        String[] parts = time.split(":");
-        if (parts.length != 2) {
-            throw new IllegalArgumentException("Invalid time format. Expected HH:MM");
-        }
-        try {
-            int hours = Integer.parseInt(parts[0]);
-            int minutes = Integer.parseInt(parts[1]);
-            return hours * 60 + minutes;
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid numbers in delivery time", e);
-        }
+    public Order(String id, String deliveryTime) {
+        this.id = id;
+        this.deliveryTime = deliveryTime;
     }
 
     public String getId() {
         return id;
     }
 
-    public int getDeliveryTime() {
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getDeliveryTime() {
         return deliveryTime;
+    }
+
+    public void setDeliveryTime(String deliveryTime) {
+        this.deliveryTime = deliveryTime;
+    }
+
+    // Optional: Method to get deliveryTime in minutes
+    public int getDeliveryTimeInMinutes() {
+        String[] parts = deliveryTime.split(":");
+        int hours = Integer.parseInt(parts[0]);
+        int minutes = Integer.parseInt(parts[1]);
+        return hours * 60 + minutes;
     }
 }

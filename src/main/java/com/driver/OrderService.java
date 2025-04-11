@@ -11,56 +11,76 @@ public class OrderService {
     @Autowired
     private OrderRepository orderRepository;
 
-
     public void addOrder(Order order){
-        orderRepository.saveOrder(order);
+        if (order != null) {
+            orderRepository.saveOrder(order);
+        }
     }
 
-    public void addPartner(String partnerId){
-        orderRepository.savePartner(partnerId);
+    public void addPartner(String partnerId) {
+        if (partnerId != null && !partnerId.trim().isEmpty()) {
+            orderRepository.savePartner(partnerId);
+        }
     }
 
-    public void createOrderPartnerPair(String orderId, String partnerId){
-        orderRepository.saveOrderPartnerMap(orderId, partnerId);
+    public void createOrderPartnerPair(String orderId, String partnerId) {
+        if (orderId != null && partnerId != null) {
+            orderRepository.saveOrderPartnerMap(orderId, partnerId);
+        }
     }
 
     public Order getOrderById(String orderId){
+        if (orderId == null) return null;
         return orderRepository.findOrderById(orderId);
     }
 
     public DeliveryPartner getPartnerById(String partnerId){
+        if (partnerId == null) return null;
         return orderRepository.findPartnerById(partnerId);
     }
 
     public Integer getOrderCountByPartnerId(String partnerId){
-        return orderRepository.findOrderCountByPartnerId(partnerId);
+        if (partnerId == null) return 0;
+        Integer count = orderRepository.findOrderCountByPartnerId(partnerId);
+        return (count != null) ? count : 0;
     }
 
     public List<String> getOrdersByPartnerId(String partnerId){
-        return orderRepository.findOrdersByPartnerId(partnerId);
+        if (partnerId == null) return new ArrayList<>();
+        List<String> orders = orderRepository.findOrdersByPartnerId(partnerId);
+        return (orders != null) ? orders : new ArrayList<>();
     }
 
     public List<String> getAllOrders(){
-        return orderRepository.findAllOrders();
+        List<String> allOrders = orderRepository.findAllOrders();
+        return (allOrders != null) ? allOrders : new ArrayList<>();
     }
 
     public void deletePartner(String partnerId){
-        orderRepository.deletePartner(partnerId);
+        if (partnerId != null) {
+            orderRepository.deletePartner(partnerId);
+        }
     }
 
     public void deleteOrder(String orderId){
-        orderRepository.deleteOrder(orderId);
+        if (orderId != null) {
+            orderRepository.deleteOrder(orderId);
+        }
     }
 
     public Integer getCountOfUnassignedOrders(){
-        return orderRepository.findCountOfUnassignedOrders();
+        Integer count = orderRepository.findCountOfUnassignedOrders();
+        return (count != null) ? count : 0;
     }
 
     public Integer getOrdersLeftAfterGivenTimeByPartnerId(String time, String partnerId){
-        return orderRepository.findOrdersLeftAfterGivenTimeByPartnerId(time, partnerId);
+        if (time == null || partnerId == null) return 0;
+        Integer count = orderRepository.findOrdersLeftAfterGivenTimeByPartnerId(time, partnerId);
+        return (count != null) ? count : 0;
     }
 
     public String getLastDeliveryTimeByPartnerId(String partnerId){
+        if (partnerId == null) return null;
         return orderRepository.findLastDeliveryTimeByPartnerId(partnerId);
     }
 }

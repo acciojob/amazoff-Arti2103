@@ -2,19 +2,21 @@ package com.driver;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
+
 import java.util.*;
 
 @Repository
 public class OrderRepository {
 
-    private final HashMap<String, Order> orderMap;
+    @Autowired
+    private OrderJpaRepository orderJpaRepository;
+
     private final HashMap<String, DeliveryPartner> partnerMap;
     private final HashMap<String, HashSet<String>> partnerToOrderMap;
     private final HashMap<String, String> orderToPartnerMap;
 
     @Autowired
     public OrderRepository() {
-        this.orderMap = new HashMap<>();
         this.partnerMap = new HashMap<>();
         this.partnerToOrderMap = new HashMap<>();
         this.orderToPartnerMap = new HashMap<>();
@@ -22,8 +24,13 @@ public class OrderRepository {
 
     public void saveOrder(Order order) {
         if (order != null) {
-            orderMap.put(order.getId(), order);
+            orderJpaRepository.save(order);
         }
+    }
+
+    public List<Order> findAllOrdersFromDB() {
+        List<Order> orders = orderJpaRepository.findAll();
+        return (orders != null) ? orders : new ArrayList<>();
     }
 
     public void savePartner(String partnerId) {
@@ -33,12 +40,13 @@ public class OrderRepository {
     }
 
     public void saveOrderPartnerMap(String orderId, String partnerId) {
-        if (orderMap.containsKey(orderId) && partnerMap.containsKey(partnerId)) {
+        if (orderId == null || partnerId == null) return;
+
+        if (orderJpaRepository.existsById(orderId) && partnerMap.containsKey(partnerId)) {
             partnerToOrderMap.putIfAbsent(partnerId, new HashSet<>());
             partnerToOrderMap.get(partnerId).add(orderId);
             orderToPartnerMap.put(orderId, partnerId);
 
-            // Update partner's order count
             DeliveryPartner partner = partnerMap.get(partnerId);
             if (partner != null) {
                 partner.setNumberOfOrders(partnerToOrderMap.get(partnerId).size());
@@ -47,85 +55,109 @@ public class OrderRepository {
     }
 
     public Order findOrderById(String orderId) {
-        return orderMap.getOrDefault(orderId, null);
+        if (orderId == null) return null;
+        return orderJpaRepository.findById(orderId).orElse(null);
     }
 
     public DeliveryPartner findPartnerById(String partnerId) {
+        if (partnerId == null) return null;
         return partnerMap.getOrDefault(partnerId, null);
     }
 
     public Integer findOrderCountByPartnerId(String partnerId) {
+        if (partnerId == null) return 0;
         return partnerToOrderMap.getOrDefault(partnerId, new HashSet<>()).size();
     }
 
     public List<String> findOrdersByPartnerId(String partnerId) {
+        if (partnerId == null) return new ArrayList<>();
         return new ArrayList<>(partnerToOrderMap.getOrDefault(partnerId, new HashSet<>()));
     }
 
     public List<String> findAllOrders() {
-        return new ArrayList<>(orderMap.keySet());
+        List<Order> orders = orderJpaRepository.findAll();
+        List<String> orderIds = new ArrayList<>();
+        if (orders != null) {
+            for (Order order : orders) {
+                if (order != null && order.getId() != null) {
+                    orderIds.add(order.getId());
+                }
+            }
+        }
+        return orderIds;
     }
 
     public void deletePartner(String partnerId) {
-        if (partnerMap.containsKey(partnerId)) {
-            HashSet<String> orders = partnerToOrderMap.remove(partnerId);
-            if (orders != null) {
-                for (String orderId : orders) {
-                    orderToPartnerMap.remove(orderId);
-                }
+        if (partnerId == null || !partnerMap.containsKey(partnerId)) return;
+
+        HashSet<String> orders = partnerToOrderMap.remove(partnerId);
+        if (orders != null) {
+            for (String orderId : orders) {
+                orderToPartnerMap.remove(orderId);
             }
-            partnerMap.remove(partnerId);
         }
+        partnerMap.remove(partnerId);
     }
 
     public void deleteOrder(String orderId) {
-        if (orderMap.containsKey(orderId)) {
-            String partnerId = orderToPartnerMap.remove(orderId);
-            if (partnerId != null && partnerToOrderMap.containsKey(partnerId)) {
-                partnerToOrderMap.get(partnerId).remove(orderId);
+        if (orderId == null || !orderJpaRepository.existsById(orderId)) return;
 
-                DeliveryPartner partner = partnerMap.get(partnerId);
-                if (partner != null) {
-                    partner.setNumberOfOrders(partnerToOrderMap.get(partnerId).size());
-                }
+        orderToPartnerMap.remove(orderId);
+        for (HashSet<String> orders : partnerToOrderMap.values()) {
+            if (orders != null) {
+                orders.remove(orderId);
             }
-            orderMap.remove(orderId);
         }
+        orderJpaRepository.deleteById(orderId);
     }
 
     public Integer findCountOfUnassignedOrders() {
-        int unassignedCount = 0;
-        for (String orderId : orderMap.keySet()) {
-            if (!orderToPartnerMap.containsKey(orderId)) {
-                unassignedCount++;
+        List<Order> allOrders = orderJpaRepository.findAll();
+        if (allOrders == null) return 0;
+
+        int unassigned = 0;
+        for (Order order : allOrders) {
+            if (order != null && !orderToPartnerMap.containsKey(order.getId())) {
+                unassigned++;
             }
         }
-        return unassignedCount;
+        return unassigned;
     }
 
     public Integer findOrdersLeftAfterGivenTimeByPartnerId(String timeString, String partnerId) {
-        int givenTime = convertTimeToMinutes(timeString);
+        if (timeString == null || partnerId == null) return 0;
 
-        return (int) partnerToOrderMap.getOrDefault(partnerId, new HashSet<>()).stream()
-                .map(orderMap::get)
+        int givenTime = convertTimeToMinutes(timeString);
+        Set<String> orderIds = partnerToOrderMap.getOrDefault(partnerId, new HashSet<>());
+
+        return (int) orderIds.stream()
+                .map(orderId -> orderJpaRepository.findById(orderId).orElse(null))
                 .filter(Objects::nonNull)
-                .mapToInt(Order::getDeliveryTime)
+                .mapToInt(Order::getDeliveryTimeInMinutes)
                 .filter(time -> time > givenTime)
                 .count();
     }
 
     private int convertTimeToMinutes(String time) {
-        String[] parts = time.split(":");
-        int hours = Integer.parseInt(parts[0]);
-        int minutes = Integer.parseInt(parts[1]);
-        return hours * 60 + minutes;
+        try {
+            String[] parts = time.split(":");
+            int hours = Integer.parseInt(parts[0]);
+            int minutes = Integer.parseInt(parts[1]);
+            return hours * 60 + minutes;
+        } catch (Exception e) {
+            return 0; // fallback in case of bad format
+        }
     }
 
     public String findLastDeliveryTimeByPartnerId(String partnerId) {
-        int maxMinutes = partnerToOrderMap.getOrDefault(partnerId, new HashSet<>()).stream()
-                .map(orderMap::get)
+        if (partnerId == null) return "00:00";
+
+        Set<String> orderIds = partnerToOrderMap.getOrDefault(partnerId, new HashSet<>());
+
+        int maxMinutes = orderIds.stream()
+                .map(orderId -> orderJpaRepository.findById(orderId).orElse(null))
                 .filter(Objects::nonNull)
-                .mapToInt(Order::getDeliveryTime)
+                .mapToInt(Order::getDeliveryTimeInMinutes)
                 .max()
                 .orElse(0);
 

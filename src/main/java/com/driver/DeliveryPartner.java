@@ -1,9 +1,20 @@
 package com.driver;
 
+import javax.persistence.Entity;
+import javax.persistence.Id;
+
+
+@Entity
 public class DeliveryPartner {
 
+    @Id
     private String id;
+
     private int numberOfOrders;
+
+    public DeliveryPartner() {
+        // Default constructor for JPA
+    }
 
     public DeliveryPartner(String id) {
         if (id == null || id.isEmpty()) {
