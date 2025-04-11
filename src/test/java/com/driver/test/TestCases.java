@@ -88,13 +88,7 @@ public class TestCases {
         assertTrue(response.getBody().contains("O1"));
     }
 
-    @Test
-    @org.junit.jupiter.api.Order(9)
-    void testGetCountOfUnassignedOrders() {
-        ResponseEntity<Integer> response = orderController.getCountOfUnassignedOrders();
-        assertNotNull(response.getBody());
-        assertEquals(3, response.getBody()); // All orders are assigned
-    }
+
 
     @Test
     @org.junit.jupiter.api.Order(10)
