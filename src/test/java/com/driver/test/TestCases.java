@@ -16,7 +16,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(classes = Application.class)
+
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class TestCases {
 
