@@ -1,166 +1,138 @@
 package com.driver;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Repository;
-
 import java.util.*;
+
+import org.springframework.stereotype.Repository;
 
 @Repository
 public class OrderRepository {
 
-    @Autowired
-    private OrderJpaRepository orderJpaRepository;
+    private HashMap<String, Order> orderMap;
+    private HashMap<String, DeliveryPartner> partnerMap;
+    private HashMap<String, HashSet<String>> partnerToOrderMap;
+    private HashMap<String, String> orderToPartnerMap;
 
-    private final HashMap<String, DeliveryPartner> partnerMap;
-    private final HashMap<String, HashSet<String>> partnerToOrderMap;
-    private final HashMap<String, String> orderToPartnerMap;
-
-    @Autowired
     public OrderRepository() {
+        this.orderMap = new HashMap<>();
         this.partnerMap = new HashMap<>();
         this.partnerToOrderMap = new HashMap<>();
         this.orderToPartnerMap = new HashMap<>();
     }
 
     public void saveOrder(Order order) {
-        if (order != null) {
-            orderJpaRepository.save(order);
-        }
-    }
-
-    public List<Order> findAllOrdersFromDB() {
-        List<Order> orders = orderJpaRepository.findAll();
-        return (orders != null) ? orders : new ArrayList<>();
+        orderMap.put(order.getId(), order);  // Save the order by ID
     }
 
     public void savePartner(String partnerId) {
-        if (partnerId != null && !partnerId.isEmpty()) {
-            partnerMap.put(partnerId, new DeliveryPartner(partnerId));
-        }
+        partnerMap.put(partnerId, new DeliveryPartner(partnerId));  // Create and save a new partner
     }
 
     public void saveOrderPartnerMap(String orderId, String partnerId) {
-        if (orderId == null || partnerId == null) return;
-
-        if (orderJpaRepository.existsById(orderId) && partnerMap.containsKey(partnerId)) {
-            partnerToOrderMap.putIfAbsent(partnerId, new HashSet<>());
-            partnerToOrderMap.get(partnerId).add(orderId);
-            orderToPartnerMap.put(orderId, partnerId);
-
+        if (orderMap.containsKey(orderId) && partnerMap.containsKey(partnerId)) {
+            partnerToOrderMap
+                    .computeIfAbsent(partnerId, k -> new HashSet<>())
+                    .add(orderId);  // Add the order to partner's list
+            orderToPartnerMap.put(orderId, partnerId);  // Assign the order to the partner
             DeliveryPartner partner = partnerMap.get(partnerId);
-            if (partner != null) {
-                partner.setNumberOfOrders(partnerToOrderMap.get(partnerId).size());
-            }
+            partner.setNumberOfOrders(partner.getNumberOfOrders() + 1);  // Increase partner's order count
         }
     }
 
-    public Order findOrderById(String orderId) {
-        if (orderId == null) return null;
-        return orderJpaRepository.findById(orderId).orElse(null);
+    public Optional<Order> findOrderById(String orderId) {
+        return Optional.ofNullable(orderMap.get(orderId));  // Returns Optional.empty() if not found
     }
 
-    public DeliveryPartner findPartnerById(String partnerId) {
-        if (partnerId == null) return null;
-        return partnerMap.getOrDefault(partnerId, null);
+    public Optional<DeliveryPartner> findPartnerById(String partnerId) {
+        return Optional.ofNullable(partnerMap.get(partnerId));  // Returns Optional.empty() if not found
     }
 
     public Integer findOrderCountByPartnerId(String partnerId) {
-        if (partnerId == null) return 0;
-        return partnerToOrderMap.getOrDefault(partnerId, new HashSet<>()).size();
+        if (partnerToOrderMap.containsKey(partnerId)) {
+            return partnerToOrderMap.get(partnerId).size();  // Return the count of orders for the partner
+        }
+        return 0;  // No orders assigned to the partner
     }
 
     public List<String> findOrdersByPartnerId(String partnerId) {
-        if (partnerId == null) return new ArrayList<>();
-        return new ArrayList<>(partnerToOrderMap.getOrDefault(partnerId, new HashSet<>()));
+        if (partnerToOrderMap.containsKey(partnerId)) {
+            return new ArrayList<>(partnerToOrderMap.get(partnerId));  // Return list of order IDs for the partner
+        }
+        return Collections.emptyList();  // No orders assigned to the partner
     }
 
     public List<String> findAllOrders() {
-        List<Order> orders = orderJpaRepository.findAll();
-        List<String> orderIds = new ArrayList<>();
-        if (orders != null) {
-            for (Order order : orders) {
-                if (order != null && order.getId() != null) {
-                    orderIds.add(order.getId());
-                }
-            }
-        }
-        return orderIds;
+        return new ArrayList<>(orderMap.keySet());  // Return all order IDs
     }
 
     public void deletePartner(String partnerId) {
-        if (partnerId == null || !partnerMap.containsKey(partnerId)) return;
-
-        HashSet<String> orders = partnerToOrderMap.remove(partnerId);
-        if (orders != null) {
-            for (String orderId : orders) {
-                orderToPartnerMap.remove(orderId);
+        if (partnerMap.containsKey(partnerId)) {
+            Set<String> orders = partnerToOrderMap.get(partnerId);
+            if (orders != null) {
+                // Move all orders from this partner to unassigned orders
+                for (String orderId : orders) {
+                    orderToPartnerMap.remove(orderId);  // Remove the partner from the order
+                }
             }
+            partnerMap.remove(partnerId);  // Remove the partner
+            partnerToOrderMap.remove(partnerId);  // Remove partner's order mapping
         }
-        partnerMap.remove(partnerId);
     }
 
     public void deleteOrder(String orderId) {
-        if (orderId == null || !orderJpaRepository.existsById(orderId)) return;
-
-        orderToPartnerMap.remove(orderId);
-        for (HashSet<String> orders : partnerToOrderMap.values()) {
-            if (orders != null) {
-                orders.remove(orderId);
+        if (orderMap.containsKey(orderId)) {
+            String partnerId = orderToPartnerMap.remove(orderId);  // Get the partner ID associated with the order
+            if (partnerId != null) {
+                partnerToOrderMap.get(partnerId).remove(orderId);  // Remove the order from the partner's order list
+                DeliveryPartner partner = partnerMap.get(partnerId);
+                if (partner != null) {
+                    partner.setNumberOfOrders(partner.getNumberOfOrders() - 1);  // Decrease the order count of the partner
+                }
             }
+            orderMap.remove(orderId);  // Remove the order
         }
-        orderJpaRepository.deleteById(orderId);
     }
 
     public Integer findCountOfUnassignedOrders() {
-        List<Order> allOrders = orderJpaRepository.findAll();
-        if (allOrders == null) return 0;
-
-        int unassigned = 0;
-        for (Order order : allOrders) {
-            if (order != null && !orderToPartnerMap.containsKey(order.getId())) {
-                unassigned++;
+        int count = 0;
+        for (String orderId : orderMap.keySet()) {
+            if (!orderToPartnerMap.containsKey(orderId)) {
+                count++;  // Increment count for unassigned orders
             }
         }
-        return unassigned;
+        return count;
     }
 
     public Integer findOrdersLeftAfterGivenTimeByPartnerId(String timeString, String partnerId) {
-        if (timeString == null || partnerId == null) return 0;
-
-        int givenTime = convertTimeToMinutes(timeString);
-        Set<String> orderIds = partnerToOrderMap.getOrDefault(partnerId, new HashSet<>());
-
-        return (int) orderIds.stream()
-                .map(orderId -> orderJpaRepository.findById(orderId).orElse(null))
-                .filter(Objects::nonNull)
-                .mapToInt(Order::getDeliveryTimeInMinutes)
-                .filter(time -> time > givenTime)
-                .count();
-    }
-
-    private int convertTimeToMinutes(String time) {
-        try {
-            String[] parts = time.split(":");
-            int hours = Integer.parseInt(parts[0]);
-            int minutes = Integer.parseInt(parts[1]);
-            return hours * 60 + minutes;
-        } catch (Exception e) {
-            return 0; // fallback in case of bad format
+        int count = 0;
+        if (partnerToOrderMap.containsKey(partnerId)) {
+            HashSet<String> orders = partnerToOrderMap.get(partnerId);
+            for (String orderId : orders) {
+                Order order = orderMap.get(orderId);
+                if (order != null) {
+                    String orderTime = order.getDeliveryTimeAsString();
+                    if (orderTime.compareTo(timeString) > 0) {
+                        count++;  // Increment count if the order time is after the given time
+                    }
+                }
+            }
         }
+        return count;
     }
 
     public String findLastDeliveryTimeByPartnerId(String partnerId) {
-        if (partnerId == null) return "00:00";
-
-        Set<String> orderIds = partnerToOrderMap.getOrDefault(partnerId, new HashSet<>());
-
-        int maxMinutes = orderIds.stream()
-                .map(orderId -> orderJpaRepository.findById(orderId).orElse(null))
-                .filter(Objects::nonNull)
-                .mapToInt(Order::getDeliveryTimeInMinutes)
-                .max()
-                .orElse(0);
-
-        return String.format("%02d:%02d", maxMinutes / 60, maxMinutes % 60);
+        String lastTime = "00:00";  // Default value if no orders found
+        if (partnerToOrderMap.containsKey(partnerId)) {
+            HashSet<String> orders = partnerToOrderMap.get(partnerId);
+            for (String orderId : orders) {
+                Order order = orderMap.get(orderId);
+                if (order != null) {
+                    String orderTime = order.getDeliveryTimeAsString();
+                    if (orderTime.compareTo(lastTime) > 0) {
+                        lastTime = orderTime;  // Update last delivery time if the order time is later
+                    }
+                }
+            }
+        }
+        return lastTime;  // Return the last delivery time
     }
 }
