@@ -60,14 +60,12 @@ public class TestCases {
         Order order = new Order("order1", "First order");
         orderController.addOrder(order);
 
-
         ResponseEntity<Order> response = orderController.getOrderById("order1");
 
         assertNotNull(response.getBody()); // Yeh ab pass hoga
         assertEquals("order1", response.getBody().getId());
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
     }
-
 
     @Test
     @org.junit.jupiter.api.Order(5)
@@ -76,25 +74,20 @@ public class TestCases {
         DeliveryPartner partner = new DeliveryPartner("partner1");
         partner.setNumberOfOrders(5); // Optionally setting the number of orders
 
-
         orderController.getPartnerMap().put(partner.getId(), partner);
 
-
         var response = orderController.getPartnerById("partner1");
-
 
         assertNotNull(response.getBody());
         assertEquals("partner1", response.getBody().getId());
     }
-
-
 
     @Test
     @org.junit.jupiter.api.Order(9)
     public void testGetCountOfUnassignedOrders() {
         // Get the count of unassigned orders
         var response = orderController.getCountOfUnassignedOrders();
-        assertEquals(0, response.getBody());  // Assuming no unassigned orders at the start
+        assertEquals("0", response.getBody());  // Fixed: comparing String with String
     }
 
     @Test
