@@ -1,20 +1,24 @@
 package com.driver;
 
 public class Order {
-    private String id;
-    private String deliveryTime;  // Time in string format, e.g., "12:30"
 
-    public Order(String id, String deliveryTime) {
-        this.id = id;
+    private String orderId;
+    private String deliveryTime; // format: HH:MM (24-hour)
+
+    public Order() {
+    }
+
+    public Order(String orderId, String deliveryTime) {
+        this.orderId = orderId;
         this.deliveryTime = deliveryTime;
     }
 
-    public String getId() {
-        return id;
+    public String getOrderId() {
+        return orderId;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
     }
 
     public String getDeliveryTime() {
@@ -23,10 +27,5 @@ public class Order {
 
     public void setDeliveryTime(String deliveryTime) {
         this.deliveryTime = deliveryTime;
-    }
-
-
-    public String getDeliveryTimeAsString() {
-        return this.deliveryTime;
     }
 }
