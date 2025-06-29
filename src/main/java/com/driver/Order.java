@@ -1,12 +1,10 @@
 package com.driver;
 
 public class Order {
-
     private String orderId;
-    private String deliveryTime; // format: HH:MM (24-hour)
+    private String deliveryTime;
 
-    public Order() {
-    }
+    public Order() {}
 
     public Order(String orderId, String deliveryTime) {
         this.orderId = orderId;
@@ -27,5 +25,10 @@ public class Order {
 
     public void setDeliveryTime(String deliveryTime) {
         this.deliveryTime = deliveryTime;
+    }
+
+    // Required for test cases
+    public String getId() {
+        return orderId;
     }
 }
